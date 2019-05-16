@@ -9,7 +9,7 @@ import csv
 import time
 import sys
 import os
-import datetime
+from datetime import datetime,timezone
 from tqdm import tqdm
 from requests.exceptions import Timeout, ConnectionError
 from urllib3.exceptions import ProtocolError
@@ -90,6 +90,92 @@ def buscar_tweets(busca, tweet_por_pag, modo, lingua, maxID = 0):
             return(api.search(q = busca, count = tweet_por_pag, tweet_mode = modo, lang = lingua))
         else:
             return(api.search(q = busca, count = tweet_por_pag, tweet_mode = modo, lang = lingua, max_id = maxID))
+
+#Função para escrever as informações dos Tweets no arquivo csv
+def w_tweet(tweets,writer):
+    #Inicializando as variaveis
+    point = ''
+    latitude = ''
+    longitude = ''
+    media_expanded_url = ''
+    media_url = ''
+    urls = ''
+    hashtags = ''
+    mentions = ''
+    mentions_id = ''
+    place = ''
+    country = ''
+    country_code = ''
+    bounding_box = ''
+    rt_text = ''
+    rt_id = ''
+    rt_created_at = ''
+    rt_source = ''
+    rt_user = ''
+    rt_user_id = ''
+    quoted_text = ''
+    quoted_id = ''
+    quoted_created_at = ''
+    quoted_source = ''
+    quoted_user = ''
+    quoted_user_id = ''
+    user_url = ''
+    user_description = ''
+    user_location = ''
+    user_default_layout = ''
+    user_default_image = ''
+    user_protected_tweets = ''
+
+    for tweet in tweets:
+        #Se o tweet foi retuitado
+        if('retweeted_status' in tweet):
+            text = limpa_tweet(tweet['retweeted_status']['full_text'])
+            rt_id = tweet['retweeted_status']['id_str']
+            rt_user = tweet['retweeted_status']['user']['screen_name']
+            rt_user_id = tweet['retweeted_status']['user']['id_str']
+            rt_created_at = tweet['retweeted_status']['created_at']
+            rt_source = tweet['retweeted_status']['source']
+            head, sep, tail = rt_source.partition('<')
+            head, sep, tail = rt_source.partition('>')
+            rt_source = tail.replace('</a>', '')
+            tweet_type = 'Retweet'
+            #Se for uma quote:
+            if 'quoted_status' in tweet['retweeted_status']:
+                #Salva no espaço de quotes
+                tweet['quoted_status'] = tweet['retweeted_status']['quoted_status']
+        #Se nao fui retuitado, salva o tuite normal:
+        else:
+            text = limpa_tweet(tweet['full_text'])
+        
+        #Salvando dados comuns
+        tweet_id = tweet['id_str']
+        rt_count = tweet['retweet_count']
+        favorite_count = tweet['favorite_count']
+        lang = tweet['lang']
+        created_at = tweet['created_at']
+        tweet_type = 'Tweet'
+        
+        #Salvando data
+        datetime_created_at = datetime.strptime(created_at, "%a %b %d %H:%M:%S +0000 %Y")
+        timestamp = int(datetime_created_at.replace(tzinfo=timezone.utc).timestamp())
+
+        #Salvando fonte
+        source = tweet['source']
+        head, sep, tail = source.partition('<')
+        head, sep, tail = source.partition('>')
+        source = tail.replace('</a>', '')
+
+        #Salvando respostas
+        reply_id = tweet['in_reply_to_status_id_str']
+        reply_user = tweet['in_reply_to_screen_name']
+        reply_user_id = tweet['in_reply_to_user_id_str']
+        #Se for um Tweet de resposta, deixar marcado
+        if reply_user_id is not None:
+            tweet_type = 'Reply'
+
+        #Salvando 
+
+    return
 
 #Função para limpar os textos recuperados dos Tweets
 def limpa_tweet(tweet_text):
@@ -258,28 +344,21 @@ for busca in tqdm(lista_topicos):
     #Criando um arquivo csv com o nome do topico para armazenar os tweets
     if not os.path.isfile(saida+busca+'.csv'):
         csvFile = open((saida+busca+'.csv'),'a')
-        csvWriter = csv.writer(csvFile, delimiter =' ',quotechar =',',quoting=csv.QUOTE_MINIMAL)
+        csvWriter = csv.writer(csvFile, delimiter =',',quotechar ='|',quoting=csv.QUOTE_MINIMAL)
+        #Escrevendo o cabeçalho do arquivo
+        csvWriter.writerow(["text", "reply_user_id", "user_screen_name", "tweet_id", "user_id", "lang", "source", "user_image", "point",
+                     "latitude", "longitude", "created_at", "timestamp", 'tweet_type', 'rt_count', 'favorite_count', 'place',
+                     'country', 'country_code', 'hashtags', 'urls', 'media_expanded_url', 'media_url', 'bounding_box',
+                     'mentions', 'mentions_id', 'reply_user', 'reply_id', 'rt_text', 'rt_user_id', 'rt_user', 'rt_id', 'rt_source',
+                     'rt_created_at', 'quoted_text', 'quoted_id', 'quoted_user', 'quoted_user_id', 'quoted_created_at',
+                     'quoted_source', 'user_name', 'user_tweets', 'user_followers', 'user_following', 'user_listed',
+                     'user_favorited', 'user_created_at', 'user_lang', 'user_location', 'user_time_zone', 'user_description',
+                     'user_url', 'user_protected_tweets', 'user_default_layout', 'user_default_image', 'user_verified', 'link'])
     else:
         print('O arquivo'+saida+busca+'.csv'+' já foi buscado. Avançando para o próximo tópico.')
         continue
     #Concatenando a string de busca
     busca = (busca + ' since:' + data_ate +' until:'+data_desde)
-    # #Realizando a primeira busca de tweets por assunto, numero de tweets, lingua e texto integral
-    # result_busca = buscar_tweets(busca = busca, tweet_por_pag = tweet_por_pag, modo = 'extended',lingua = 'pt')
-    # #Abrindo o objeto tweet retornado pela busca
-    # dados = result_busca['statuses']
-    # #Lendo as partes de interesse do tuite e salvando no arquivo
-    # for dado in dados:
-    #     #Se o tweet foi retuitado
-    #     if('retweeted_status' in dado):
-    #         csvWriter.writerow([dado['user']['name'],limpa_tweet(dado['retweeted_status']['full_text']),dado['created_at'],dado['retweet_count']])            
-    #     #Se nao fui retuitado, salva o tuite normal:
-    #     else:
-    #         csvWriter.writerow([dado['user']['name'],limpa_tweet(dado['full_text']), dado['created_at'],dado['retweet_count']])
-    
-    # #Com o ID do tweet mais antigo, atualizamos o parametro max_id para utilizar no loop
-    # if dados: 
-    #     maxID = dados[-1]['id']
     maxID = 0
     dados = [1,2,3]
 
@@ -290,13 +369,14 @@ for busca in tqdm(lista_topicos):
         #Abrindo o objeto tweet retornado pela busca
         dados = result_busca['statuses']
         #Lendo as partes de interesse do tuite e salvando no arquivo
-        for dado in dados:
-            #Se o tweet foi retuitado
-            if('retweeted_status' in dado):
-                csvWriter.writerow([dado['user']['name'],limpa_tweet(dado['retweeted_status']['full_text']),dado['created_at'],dado['retweet_count']])
-            #Se nao fui retuitado, salva o tuite normal:
-            else:
-                csvWriter.writerow([dado['user']['name'],limpa_tweet(dado['full_text']), dado['created_at'],dado['retweet_count']])
+        w_tweet(dados,csvWriter)
+        # for dado in dados:
+        #     #Se o tweet foi retuitado
+        #     if('retweeted_status' in dado):
+        #         csvWriter.writerow([dado['user']['name'],limpa_tweet(dado['retweeted_status']['full_text']),dado['created_at'],dado['retweet_count']])
+        #     #Se nao fui retuitado, salva o tuite normal:
+        #     else:
+        #         csvWriter.writerow([dado['user']['name'],limpa_tweet(dado['full_text']), dado['created_at'],dado['retweet_count']])
         #Atualizando o id do ultimo tweet buscado
         if dados:
             maxID = dados[-1]['id']
