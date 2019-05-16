@@ -1,0 +1,5 @@
+Erro de login com a key:dZouIEWX05CMZ4fkbGjAk2yVj e secret:Q0ZJY6kwtjNJ3lv8SDBjQXuZQnqCMOzkxf5jeMr8Cf7s9R2axH
+Erro de login com a key:GPcSV2iY7aHDEBV8HaKkE0wlB e secret:bkiCa6ty14nwStMJJUuamew2d9Lq4ToD7PkNzlbGLtM2mqwx8b
+O contador de keys estourou, erro fatal.
+Exception ignored in: <__main__.Logger_stdout object at 0x7faa019405f8>
+AttributeError: 'Logger_stdout' object has no attribute 'flush'
