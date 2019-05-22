@@ -9,7 +9,7 @@ import csv
 import time
 import sys
 import os
-from datetime import datetime,timezone
+from datetime import datetime,timezone,timedelta
 from tqdm import tqdm
 from requests.exceptions import Timeout, ConnectionError
 from urllib3.exceptions import ProtocolError
@@ -93,40 +93,42 @@ def buscar_tweets(busca, tweet_por_pag, modo, lingua, maxID = 0):
 
 #Função para escrever as informações dos Tweets no arquivo csv
 def w_tweet(tweets,writer):
-    #Inicializando as variaveis
-    point = ''
-    latitude = ''
-    longitude = ''
-    media_expanded_url = ''
-    media_url = ''
-    urls = ''
-    hashtags = ''
-    mentions = ''
-    mentions_id = ''
-    place = ''
-    country = ''
-    country_code = ''
-    bounding_box = ''
-    rt_text = ''
-    rt_id = ''
-    rt_created_at = ''
-    rt_source = ''
-    rt_user = ''
-    rt_user_id = ''
-    quoted_text = ''
-    quoted_id = ''
-    quoted_created_at = ''
-    quoted_source = ''
-    quoted_user = ''
-    quoted_user_id = ''
-    user_url = ''
-    user_description = ''
-    user_location = ''
-    user_default_layout = ''
-    user_default_image = ''
-    user_protected_tweets = ''
 
     for tweet in tweets:
+    
+        #Inicializando as variaveis
+        point = ''
+        latitude = ''
+        longitude = ''
+        media_expanded_url = ''
+        media_url = ''
+        urls = ''
+        hashtags = ''
+        mentions = ''
+        mentions_id = ''
+        place = ''
+        country = ''
+        country_code = ''
+        bounding_box = ''
+        rt_text = ''
+        rt_id = ''
+        rt_created_at = ''
+        rt_source = ''
+        rt_user = ''
+        rt_user_id = ''
+        quoted_text = ''
+        quoted_id = ''
+        quoted_created_at = ''
+        quoted_source = ''
+        quoted_user = ''
+        quoted_user_id = ''
+        user_url = ''
+        user_description = ''
+        user_location = ''
+        user_default_layout = ''
+        user_default_image = ''
+        user_protected_tweets = ''
+
         #Se o tweet foi retuitado
         if('retweeted_status' in tweet):
             text = limpa_tweet(tweet['retweeted_status']['full_text'])
@@ -291,6 +293,15 @@ def w_tweet(tweets,writer):
                 if rt_text.startswith(b):
                     text = str(a+': '+rt_text)        
 
+        #Escrevendo as infos do Tweet na planilha
+        writer.writerow([text, reply_user_id, user_screen_name, tweet_id, user_id, lang, source, user_image, point,
+                     latitude, longitude, created_at, timestamp, tweet_type, rt_count, favorite_count, place,
+                     country, country_code, hashtags, urls, media_expanded_url, media_url, bounding_box,
+                     mentions, mentions_id, reply_user, reply_id, rt_text, rt_user_id, rt_user, rt_id, rt_source,
+                     rt_created_at, quoted_text, quoted_id, quoted_user, quoted_user_id, quoted_created_at,
+                     quoted_source, user_name, user_tweets, user_followers, user_following, user_listed,
+                     user_favorited, user_created_at, user_lang, user_location, user_time_zone, user_description,
+                     user_url, user_protected_tweets, user_default_layout, user_default_image, user_verified, link])
     return
 
 #Função para limpar os textos recuperados dos Tweets
@@ -382,7 +393,7 @@ def trocaKey():
 #Função para criar diretorios para armazenar os resultados das buscas
 def cria_pasta():
     global saida
-    data = datetime.datetime.now()
+    data = datetime.now()
     data = data.strftime("%Y-%m-%d %H:%M")
     saida = 'Resultados/'+data+'/'
     time.sleep(0.1*float(instancia))
@@ -426,7 +437,7 @@ else:
 
     #Criando a variavel para armazenar ou outro limite da busca
     if(sys.argv[1] == 'hoje'):
-        data_desde = (datetime.datetime.now()+datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+        data_desde = (datetime.now()+timedelta(days=1)).strftime("%Y-%m-%d")
     else:
         data_desde = sys.argv[1]
     #Criando a pasta para armazenar os dados da coleta
