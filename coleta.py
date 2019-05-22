@@ -169,11 +169,127 @@ def w_tweet(tweets,writer):
         reply_id = tweet['in_reply_to_status_id_str']
         reply_user = tweet['in_reply_to_screen_name']
         reply_user_id = tweet['in_reply_to_user_id_str']
+        
         #Se for um Tweet de resposta, deixar marcado
         if reply_user_id is not None:
             tweet_type = 'Reply'
 
-        #Salvando 
+        #Se for um Tweet de citação
+        if 'quoted_status' in tweet:
+            # Pegar o texto citado
+            quoted_text = (tweet['quoted_status']['full_text']\
+                        if 'full_text' in tweet['quoted_status']\
+                        else tweet['quoted_status']['text'])\
+                        .replace('\n', ' ')\
+                        .replace('\r', ' ')\
+                        .replace(',', ' ')\
+                        .replace('|', ' ')
+            # Dados do tweet citado
+            quoted_id = tweet['quoted_status']['id_str']
+            quoted_user = tweet['quoted_status']['user']['screen_name']
+            quoted_user_id = tweet['quoted_status']['user']['id_str']
+            quoted_created_at = tweet['quoted_status']['created_at']
+            quoted_source = tweet['quoted_status']['source']
+            head, sep, tail = quoted_source.partition('<')
+            head, sep, tail = quoted_source.partition('>')
+            quoted_source = tail.replace('</a>', '')
+            # Verifica se foi um retweet
+            tweet_type = 'Retweet' if 'retweeted_status' in tweet else 'Quote' # text.startswith('RT @')
+
+        # Geolocalização
+        if 'coordinates' in tweet:
+            try: # add location data
+                latitude = tweet['coordinates']['coordinates'][1]
+                longitude = tweet['coordinates']['coordinates'][0]
+                point = 'Point'
+            except: pass
+
+        # Local
+        if 'place' in tweet:
+            try: # add place data
+                place = tweet['place']['full_name']
+                country = tweet['place']['country']
+                country_code = tweet['place']['country_code']
+                bounding_box = tweet['place']['bounding_box']['coordinates']
+            except: pass
+
+        # Dados linkados ao tweet
+        if 'entities' in tweet:
+            # media URL
+            if 'media' in tweet['entities']:
+                range_media = range(len(tweet['entities']['media']))
+                for i in range_media:
+                    if i < max(range_media):
+                        media_expanded_url = str(tweet['entities']['media'][i]['expanded_url'])
+                    else: media_url = str(tweet['entities']['media'][i]['media_url'])
+            # external URLs
+            if 'urls' in tweet['entities']:
+                range_urls = range(len(tweet['entities']['urls']))
+                for i in range_urls:
+                    if i < max(range_urls):
+                        urls = urls+'"'+str(tweet['entities']['urls'][i]['expanded_url'])+'"'+", "
+                    else: urls = urls+'"'+str(tweet['entities']['urls'][i]['expanded_url'])+'"'
+            # hashtags in text
+            if 'hashtags' in tweet['entities']:
+                range_hashtags = range(len(tweet['entities']['hashtags']))
+                for i in range_hashtags:
+                    if i < max(range_hashtags):
+                        hashtags = hashtags+'#'+str(tweet['entities']['hashtags'][i]['text'])+", "
+                    else: hashtags = hashtags+'#'+str(tweet['entities']['hashtags'][i]['text'])
+            # mentions in text
+            if 'user_mentions' in tweet['entities']:
+                range_mentions = range(len(tweet['entities']['user_mentions']))
+                for i in range_mentions:
+                    if i < max(range_mentions):
+                        mentions = mentions+str(tweet['entities']['user_mentions'][i]['screen_name'])+", "
+                        mentions_id = mentions_id+str(tweet['entities']['user_mentions'][i]['id_str'])+", "
+                    else: # add both user name and ID to mentions
+                        mentions = mentions+str(tweet['entities']['user_mentions'][i]['screen_name'])
+                        mentions_id = mentions_id+str(tweet['entities']['user_mentions'][i]['id_str'])
+        
+        # Extraindo dados do usuario
+        user_name = tweet['user']['name']
+        user_screen_name = tweet['user']['screen_name']
+        user_id = tweet['user']['id_str']
+        user_tweets = tweet['user']['statuses_count']
+        user_followers = tweet['user']['followers_count']
+        user_following = tweet['user']['friends_count']
+        user_listed = tweet['user']['listed_count']
+        user_favorited = tweet['user']['favourites_count']
+        user_created_at = tweet['user']['created_at']
+        user_time_zone = tweet['user']['time_zone']
+        user_lang = tweet['user']['lang']
+        user_image = tweet['user']['profile_image_url']
+        user_verified = str(tweet['user']['verified']).replace('False', '')
+
+        if tweet['user']['url']:
+            user_url = tweet['user']['url'].replace('\n', ' ').replace('\r', ' ')
+
+        if tweet['user']['description']:
+            user_description = tweet['user']['description'].replace('\n', ' ').replace('\r', ' ')
+
+        if tweet['user']['location']:
+            user_location = tweet['user']['location'].replace('\n', ' ').replace('\r', ' ')
+
+        if tweet['user']['default_profile']:
+            user_default_layout = tweet['user']['default_profile']
+
+        if tweet['user']['default_profile_image']:
+            user_default_image = tweet['user']['default_profile_image']
+
+        if tweet['user']['protected']:
+            user_protected_tweets = tweet['user']['protected']
+
+        # Formando o link do Tweet
+        link = 'https://twitter.com/' + user_screen_name + '/status/' + tweet_id
+
+        # workaround for truncated tweet text:
+        # extract full text from retweeted status
+        if text.endswith('…')\
+        and tweet_type == 'Retweet':
+                a,b = text.rstrip('…').split(': ',1)
+                if rt_text.startswith(b):
+                    text = str(a+': '+rt_text)        
 
     return
 
