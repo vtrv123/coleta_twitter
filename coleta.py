@@ -70,26 +70,29 @@ sys.stdout = Logger_stdout()
 
 #Cria uma funcao para realizar as buscas na API e evitar erros:
 def buscar_tweets(busca, tweet_por_pag, modo, lingua, maxID = 0):
-    try:
-        if(maxID == 0):
-            return(api.search(q = busca, count = tweet_por_pag, tweet_mode = modo, lang = lingua))
-        else:
-            return(api.search(q = busca, count = tweet_por_pag, tweet_mode = modo, lang = lingua, max_id = maxID))
-    except TwythonRateLimitError:
-        trocaKey()
-        if(maxID == 0):
-            return(api.search(q = busca, count = tweet_por_pag, tweet_mode = modo, lang = lingua))
-        else:
-            return(api.search(q = busca, count = tweet_por_pag, tweet_mode = modo, lang = lingua, max_id = maxID))
-    except(Timeout,ConnectionError,ProtocolError,TwythonError) as exc:
-        print(exc)
-        print('Erro na busca: '+ busca)
-        print('Esperando 5 min para reestabelecer conexão')
-        time.sleep(300)
-        if(maxID == 0):
-            return(api.search(q = busca, count = tweet_por_pag, tweet_mode = modo, lang = lingua))
-        else:
-            return(api.search(q = busca, count = tweet_por_pag, tweet_mode = modo, lang = lingua, max_id = maxID))
+    retry_count = 0
+    while True: #loop while para tentar novamente a busca caso exceda o limite de buscas
+        if(retry_count > 3):
+            print('Numero de tentativas excedido, esperando a API resetar para tentar novamente.')
+            print('Tempo de espera: 5 min.')
+            time.sleep(300)
+        try:
+            if(maxID == 0):
+                return(api.search(q = busca, count = tweet_por_pag, tweet_mode = modo, lang = lingua))
+            else:
+                return(api.search(q = busca, count = tweet_por_pag, tweet_mode = modo, lang = lingua, max_id = maxID))
+        except TwythonRateLimitError:
+            trocaKey()
+            retry_count += 1
+            continue
+        except(Timeout,ConnectionError,ProtocolError,TwythonError) as exc:
+            print(exc)
+            print('Erro na busca: '+ busca)
+            print('Esperando 5 min para reestabelecer conexão')
+            time.sleep(300)
+            retry_count += 1
+            continue
+        break
 
 #Função para escrever as informações dos Tweets no arquivo csv
 def w_tweet(tweets,writer):
