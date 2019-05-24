@@ -103,8 +103,10 @@ def w_tweet(tweets,writer):
         point = ''
         latitude = ''
         longitude = ''
+        coordinates = ''
         media_expanded_url = ''
         media_url = ''
+        media_type = ''
         urls = ''
         hashtags = ''
         mentions = ''
@@ -113,6 +115,7 @@ def w_tweet(tweets,writer):
         country = ''
         country_code = ''
         bounding_box = ''
+        is_retweet = ''
         rt_text = ''
         rt_id = ''
         rt_created_at = ''
@@ -131,14 +134,19 @@ def w_tweet(tweets,writer):
         user_default_layout = ''
         user_default_image = ''
         user_protected_tweets = ''
+        original_tweet_created_at = ''
+        retweet_created_at = ''
+        quoted_created_at = ''
 
         #Se o tweet foi retuitado
         if('retweeted_status' in tweet):
+            is_retweet = True
             text = limpa_tweet(tweet['retweeted_status']['full_text'])
             rt_id = tweet['retweeted_status']['id_str']
             rt_user = tweet['retweeted_status']['user']['screen_name']
             rt_user_id = tweet['retweeted_status']['user']['id_str']
             rt_created_at = tweet['retweeted_status']['created_at']
+            retweet_created_at = datetime.strptime(rt_created_at, "%a %b %d %H:%M:%S +0000 %Y").strftime("%Y-%m-%d %H:%M:%S")
             rt_source = tweet['retweeted_status']['source']
             head, sep, tail = rt_source.partition('<')
             head, sep, tail = rt_source.partition('>')
@@ -150,6 +158,7 @@ def w_tweet(tweets,writer):
                 tweet['quoted_status'] = tweet['retweeted_status']['quoted_status']
         #Se nao fui retuitado, salva o tuite normal:
         else:
+            is_retweet = False
             text = limpa_tweet(tweet['full_text'])
         
         #Salvando dados comuns
@@ -159,10 +168,6 @@ def w_tweet(tweets,writer):
         lang = tweet['lang']
         created_at = tweet['created_at']
         tweet_type = 'Tweet'
-        
-        #Salvando data
-        datetime_created_at = datetime.strptime(created_at, "%a %b %d %H:%M:%S +0000 %Y")
-        timestamp = int(datetime_created_at.replace(tzinfo=timezone.utc).timestamp())
 
         #Salvando fonte
         source = tweet['source']
@@ -194,6 +199,7 @@ def w_tweet(tweets,writer):
             quoted_user = tweet['quoted_status']['user']['screen_name']
             quoted_user_id = tweet['quoted_status']['user']['id_str']
             quoted_created_at = tweet['quoted_status']['created_at']
+            quoted_created_at = datetime.strptime(quoted_created_at, "%a %b %d %H:%M:%S +0000 %Y").strftime("%Y-%m-%d %H:%M:%S")
             quoted_source = tweet['quoted_status']['source']
             head, sep, tail = quoted_source.partition('<')
             head, sep, tail = quoted_source.partition('>')
@@ -201,12 +207,20 @@ def w_tweet(tweets,writer):
             # Verifica se foi um retweet
             tweet_type = 'Retweet' if 'retweeted_status' in tweet else 'Quote' # text.startswith('RT @')
 
+        
+        #Salvando e formatando datas
+        datetime_created_at = datetime.strptime(created_at, "%a %b %d %H:%M:%S +0000 %Y")
+        timestamp = int(datetime_created_at.replace(tzinfo=timezone.utc).timestamp())
+        original_tweet_created_at = datetime.strptime(created_at, "%a %b %d %H:%M:%S +0000 %Y").strftime("%Y-%m-%d %H:%M:%S")
+        
+
         # Geolocalização
         if 'coordinates' in tweet:
             try: # add location data
                 latitude = tweet['coordinates']['coordinates'][1]
                 longitude = tweet['coordinates']['coordinates'][0]
                 point = 'Point'
+                coordinates = ("{'coordinates': "+"[{}, {}], 'type': '{}'".format(latitude,longitude,point) + "}")
             except: pass
 
         # Local
@@ -226,7 +240,10 @@ def w_tweet(tweets,writer):
                 for i in range_media:
                     if i < max(range_media):
                         media_expanded_url = str(tweet['entities']['media'][i]['expanded_url'])
-                    else: media_url = str(tweet['entities']['media'][i]['media_url'])
+                        media_type = str(tweet['entities']['media'][i]['type'])
+                    else: 
+                        media_url = str(tweet['entities']['media'][i]['media_url'])
+                        media_type = str(tweet['entities']['media'][i]['type'])
             # external URLs
             if 'urls' in tweet['entities']:
                 range_urls = range(len(tweet['entities']['urls']))
@@ -297,14 +314,16 @@ def w_tweet(tweets,writer):
                     text = str(a+': '+rt_text)        
 
         #Escrevendo as infos do Tweet na planilha
-        writer.writerow([text, reply_user_id, user_screen_name, tweet_id, user_id, lang, source, user_image, point,
-                     latitude, longitude, created_at, timestamp, tweet_type, rt_count, favorite_count, place,
-                     country, country_code, hashtags, urls, media_expanded_url, media_url, bounding_box,
-                     mentions, mentions_id, reply_user, reply_id, rt_text, rt_user_id, rt_user, rt_id, rt_source,
-                     rt_created_at, quoted_text, quoted_id, quoted_user, quoted_user_id, quoted_created_at,
-                     quoted_source, user_name, user_tweets, user_followers, user_following, user_listed,
-                     user_favorited, user_created_at, user_lang, user_location, user_time_zone, user_description,
-                     user_url, user_protected_tweets, user_default_layout, user_default_image, user_verified, link])
+        #["tweet_text","retweet_count","favorite_count","followers_count","original_tweet_screen_name","retweet_screen_name",
+       # "original_tweet_created_at","retweet_created_at","retweet_id","original_tweet_id","original_tweet_coordinates","retweet_coordinates",
+        #"original_tweet_user_id","retweet_user_id","search_id","timestamp","search_string","is_retweet","type","source",
+        #"in_reply_to_status_id","in_reply_to_screen_name","in_reply_to_user_id","quoted_id","quoted_screen_name","quoted_user_id",
+        #"quoted_created_at","quoted_coordinates","place_name","place_fullname","place_country","place_cc","place_bb","media","media_url","media_expanded_url"])
+
+        writer.writerow([text, rt_count, favorite_count, user_followers, rt_user, user_name, original_tweet_created_at,
+                     retweet_created_at, rt_id, tweet_id, coordinates, ' ', user_id, rt_user_id, " ", timestamp, ' ',
+                     is_retweet, tweet_type, source, reply_id, reply_user, reply_user_id, quoted_id, quoted_user, quoted_user_id,
+                     quoted_created_at, ' ', place, place, country, country_code, bounding_box, media_type, media_url, media_expanded_url])
     return
 
 #Função para limpar os textos recuperados dos Tweets
@@ -476,14 +495,19 @@ for busca in tqdm(lista_topicos):
         csvFile = open((saida+busca+'.csv'),'a')
         csvWriter = csv.writer(csvFile, delimiter =',',quotechar ='|',quoting=csv.QUOTE_MINIMAL)
         #Escrevendo o cabeçalho do arquivo
-        csvWriter.writerow(["text", "reply_user_id", "user_screen_name", "tweet_id", "user_id", "lang", "source", "user_image", "point",
-                     "latitude", "longitude", "created_at", "timestamp", 'tweet_type', 'rt_count', 'favorite_count', 'place',
-                     'country', 'country_code', 'hashtags', 'urls', 'media_expanded_url', 'media_url', 'bounding_box',
-                     'mentions', 'mentions_id', 'reply_user', 'reply_id', 'rt_text', 'rt_user_id', 'rt_user', 'rt_id', 'rt_source',
-                     'rt_created_at', 'quoted_text', 'quoted_id', 'quoted_user', 'quoted_user_id', 'quoted_created_at',
-                     'quoted_source', 'user_name', 'user_tweets', 'user_followers', 'user_following', 'user_listed',
-                     'user_favorited', 'user_created_at', 'user_lang', 'user_location', 'user_time_zone', 'user_description',
-                     'user_url', 'user_protected_tweets', 'user_default_layout', 'user_default_image', 'user_verified', 'link'])
+        csvWriter.writerow(["tweet_text","retweet_count","favorite_count","followers_count","original_tweet_screen_name","retweet_screen_name",
+        "original_tweet_created_at","retweet_created_at","retweet_id","original_tweet_id","original_tweet_coordinates","retweet_coordinates",
+        "original_tweet_user_id","retweet_user_id","search_id","timestamp","search_string","is_retweet","type","source",
+        "in_reply_to_status_id","in_reply_to_screen_name","in_reply_to_user_id","quoted_id","quoted_screen_name","quoted_user_id",
+        "quoted_created_at","quoted_coordinates","place_name","place_fullname","place_country","place_cc","place_bb","media","media_url","media_expanded_url"])
+        # csvWriter.writerow(["text", "reply_user_id", "user_screen_name", "tweet_id", "user_id", "lang", "source", "user_image", "point",
+        #              "latitude", "longitude", "created_at", "timestamp", 'tweet_type', 'rt_count', 'favorite_count', 'place',
+        #              'country', 'country_code', 'hashtags', 'urls', 'media_expanded_url', 'media_url', 'bounding_box',
+        #              'mentions', 'mentions_id', 'reply_user', 'reply_id', 'rt_text', 'rt_user_id', 'rt_user', 'rt_id', 'rt_source',
+        #              'rt_created_at', 'quoted_text', 'quoted_id', 'quoted_user', 'quoted_user_id', 'quoted_created_at',
+        #              'quoted_source', 'user_name', 'user_tweets', 'user_followers', 'user_following', 'user_listed',
+        #              'user_favorited', 'user_created_at', 'user_lang', 'user_location', 'user_time_zone', 'user_description',
+        #              'user_url', 'user_protected_tweets', 'user_default_layout', 'user_default_image', 'user_verified', 'link'])
     else:
         print('O arquivo'+saida+busca+'.csv'+' já foi buscado. Avançando para o próximo tópico.')
         continue
