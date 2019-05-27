@@ -493,7 +493,7 @@ for busca in tqdm(lista_topicos):
     #Criando um arquivo csv com o nome do topico para armazenar os tweets
     if not os.path.isfile(saida+busca+'.csv'):
         csvFile = open((saida+busca+'.csv'),'a')
-        csvWriter = csv.writer(csvFile, delimiter =',',quotechar ='|',quoting=csv.QUOTE_MINIMAL)
+        csvWriter = csv.writer(csvFile, delimiter =',',quotechar ='"',quoting=csv.QUOTE_MINIMAL)
         #Escrevendo o cabeçalho do arquivo
         csvWriter.writerow(["tweet_text","retweet_count","favorite_count","followers_count","original_tweet_screen_name","retweet_screen_name",
         "original_tweet_created_at","retweet_created_at","retweet_id","original_tweet_id","original_tweet_coordinates","retweet_coordinates",
