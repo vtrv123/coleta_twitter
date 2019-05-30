@@ -471,8 +471,14 @@ leitor = open(nome_arq, "r")
 lista_topicos = []
 
 #Armazenando os trending topics em uma lista
+lido = ''
 for linha in leitor:
-    lista_topicos.append(linha.rstrip())
+    if len(linha.strip()) != 0 :
+        lido = lido + linha.rstrip()+ ' '
+    elif linha.strip() == '':
+        lista_topicos.append(lido[:-1])
+        lido = ''
+lista_topicos.remove('')
 leitor.close()
 #Retirando elementos repetidos da lista
 lista_topicos = list(dict.fromkeys(lista_topicos))
