@@ -1,66 +1,88 @@
-#SCRIPT PARA CONVERSÃO NO FORMATO DE DATASET DO LABIC
-#O SCRIPT CHECA SE TODOS OS PARAMETROS DE COLETA ESTÃO PRESENTES
-#PARAMETROS COLETADOS ALÉM DOS CHECADOS SERÃO IGNORADOS NO RESULTADO
-
+#SCRIPT PARA FUNDIR DATASETS DE COLETA DO MESMO TÓPICO, ORGANIZANDO CRONOLOGICAMENTE
 import csv
 import sys
 import os
 import codecs
-print("\nListando arquivos no diretorio:\n")
+print("\nListando arquivos .csv no diretorio:\n")
 pasta = os.getcwd()
-lista_arq = os.listdir(pasta)
-for arquivo in lista_arq:
-    print(arquivo)
-print('')
 lista_csv = []
-while True:
-    ans_1 = input("As opções de conversão são: \n 1. Converter todos os arquivos da pasta. \n 2.Converter apenas um arquivo em específico. \n\n Digite a opção desejada: ")
-    if (int(ans_1) == 2):
-        arquivo = (input("Digite o nome do arquivo .csv a ser convertido:\n")+'.csv')
-        if arquivo not in lista_arq:
+lista_conv = []
+for arquivo in os.listdir(pasta):
+    if arquivo.endswith('.csv'):
+        lista_csv.append(arquivo)
+        print(arquivo)
+del arquivo
+print('')
+
+ans_1 = input("Opções de fusão de datasets: \n\n 1 - Especificar os nomes dos datasets a serem fundidos \n 2 - Escolher um radical comum e fundir todos os datasets derivados automaticamente. \n")
+
+if (int(ans_1) == 1):
+    while True:
+        arquivo = (input("Digite o nome do arquivo .csv a ser adicionado à conversão: (Não precisa colocar .csv)\n")+'.csv')
+        if arquivo not in lista_csv:
             print('\nO arquivo '+arquivo+' não existe. Tente novamente.\n')
             continue
-        if not os.path.isdir("convert/"):
-            os.makedirs("convert/")
-        if not os.path.isfile("convert/"+arquivo):
-            lista_csv.append(arquivo)
-            break
+        elif arquivo in lista_conv:
+            print('\nO arquivo '+arquivo+' já foi adicionado para fusão. Tente novamente.\n')
         else:
-            ans = input('O arquivo '+arquivo+' já foi convertido. Deseja sobrescrever o arquivo?(Y/N)')
-            if(ans == 'N'):
-                sys.exit("Erro: arquivo já convertido. Remova o arquivo da pasta e tente novamente.")
-            elif(ans == 'Y'):
-                os.remove("convert/"+arquivo)
-                lista_csv.append(arquivo)
+            lista_conv.append(arquivo)
+            print('Arquivo '+arquivo+' inserido com sucesso. Deseja adicionar mais arquivos?\n')
+            ans_2 = input("Digite 'Y' para SIM ou 'N' para NÃO:")
+            if (ans_2 == 'Y'):
+                continue
+            elif(ans_2 == 'N'):
+                print('Os arquivos adicionados foram:')
+                for arq in lista_conv:
+                    print(arq)
                 break
+                print("Deseja continuar para a fase de processamento?\n")
+                ans_3 = input("Digite 'Y' para SIM ou 'N' para NÃO:")
+                if (ans_3 == 'Y'):
+                    break
+                elif(ans_3 == 'N'):
+                    continue
             else:
-                print("Comando não reconhecido. Digite Y para 'sim' e N para 'não' e em seguida pressione ENTER.")
-    elif(int(ans_1) == 1):
-        print("Escolhida a opção de converter todos os arquivos da pasta.")
-        if not os.path.isdir("convert/"):
-            os.makedirs("convert/")
-        for file in lista_arq:
-            if file.endswith(".csv"):
-                while True:
-                    if os.path.isfile("convert/"+file):
-                        ans = input('O arquivo '+file+' já foi convertido. Deseja sobrescrever o arquivo?(Y/N)')
-                        if(ans == 'N'):
-                            sys.exit("Erro: arquivo já convertido. Remova o arquivo da pasta e tente novamente.")
-                            break
-                        elif(ans == 'Y'):
-                            os.remove("convert/"+file)
-                            lista_csv.append(file)
-                            break
-                        else:
-                            print("Comando não reconhecido. Digite Y para 'sim' e N para 'não' e em seguida pressione ENTER.")
-                    else:
-                        lista_csv.append(file)
-                        break
-        break
-    else:
-        print('Opção não reconhecida, tente novamente.\n\n')
-print(lista_csv)  
-        
+                print("Comando não reconhecido. O último arquivo inserido foi: "+lista_conv[-1]+"\n Refaça a operação.")
+                continue
+    print('')
+    del arquivo
+elif(int(ans_1) == 2):
+    while True:
+        print("Listando novamente os arquivos de dataset da pasta para a escolha do radical comum:")
+        for arquivo in lista_csv:
+            print(arquivo)
+            print('')
+        del arquivo
+        radical = input("Digite o nome do radical comum aos arquivos que serão fundidos (parte da palavra que é igual p/ todos):\n")
+        match = [s for s in lista_csv if radical in s]
+        print("Os arquivos encontrados foram:")
+        for arquivo in match:
+            print(arquivo)
+            print('')
+        del arquivo
+        print("Deseja proceder com a fusão dos arquivos acima?\n")
+        ans_4 = input("Digite 'Y' para 'SIM' e 'N' para 'NÃO':")
+        if (ans_4 == 'Y'):
+            lista_conv = match.copy()
+            break
+        elif(ans_2 == 'N'):
+            continue
+        else:
+            print("Comando não reconhecido. Refaça a operação.\n")
+            continue
+else:
+    print("Comando não reconhecido, respostas possíveis: 1 ou 2. Execute novamente o programa.")
+    sys.exit()
+
+while True:
+    end_file = input("\nEscolha o nome do arquivo de saída a ser gerado: ")
+    if not os.path.isdir("merge/"):
+        os.makedirs("merge/")
+    if os.path.isfile("merge/"+end_file):
+        print("Já existe um arquivo com o nome: "+end_file+"\n Digite outro nome e tente novamente.")
+        continue
+    output = open(("merge/"+end_file),'w')
+
 for arq_csv in lista_csv:
     w_out = open(("convert/"+arq_csv),'w')
     csvWriter = csv.writer(w_out, delimiter =',',quotechar ='"',quoting=csv.QUOTE_MINIMAL)
@@ -146,7 +168,7 @@ for arq_csv in lista_csv:
                         
                     line_count += 1
         except csv.Error:
-            sys.exit("Erro csv")
+            sys.exit('file %s, line %d: %s' % (arquivo, reader.line_num, e))
     csv_file.close()
     w_out.close()
     print('Arquivo {} concluído.'.format(arq_csv))
