@@ -8,7 +8,7 @@ import pandas as pd
 print("\nListando arquivos .csv no diretorio:\n")
 pasta = os.getcwd() + '/'
 lista_csv = []
-lista_path = []
+mapa_csv = {}
 lista_conv = []
 
 for path, subdirs, files in os.walk(pasta):
@@ -16,16 +16,21 @@ for path, subdirs, files in os.walk(pasta):
         if name.endswith('.csv'):
             if name not in lista_csv:
                 lista_csv.append(name)
-            lista_path = os.path.join(path, name)
+            if name not in mapa_csv:
+                mapa_csv[name] = []
+                (mapa_csv[name]).append(os.path.join(path, name))
+            else:
+                (mapa_csv[name]).append(os.path.join(path, name))
+lista_csv = list(dict.fromkeys(lista_csv))
 for csvfile in lista_csv:
     print(csvfile)
 print('')
 
-ans_1 = input("Opções de fusão de datasets: \n\n 1 - Especificar os nomes dos datasets a serem fundidos \n 2 - Escolher um radical comum e fundir todos os datasets derivados automaticamente.\n Resposta:")
+ans_1 = input("Opções de fusão de datasets: \n\n 1 - Especificar os nomes dos datasets a serem fundidos \n 2 - Fundir todos os datasets listados.\n Resposta:")
 
 if (int(ans_1) == 1):
     while True:
-        arquivo = (input("Digite o nome do arquivo .csv a ser adicionado à conversão: (Não precisa colocar .csv)\n")+'.csv')
+        arquivo = (input("Digite o nome do arquivo .csv a ser adicionado à lista: (Não precisa colocar .csv)\n")+'.csv')
         if arquivo not in lista_csv:
             print('\nO arquivo '+arquivo+' não existe. Tente novamente.\n')
             continue
@@ -48,21 +53,21 @@ if (int(ans_1) == 1):
     print('')
      
 elif(int(ans_1) == 2):
-    while True:
-        print("\nListando novamente os arquivos de dataset da pasta para a escolha do radical comum:\n")
-        for arquivo in lista_csv:
-            print(arquivo)
+    print("\nListando novamente os arquivos de dataset da pasta:\n")
+    for arquivo in lista_csv:
+        print(arquivo)
+        print('')
          
-        radical = input("\nDigite o nome do radical comum aos arquivos que serão fundidos (parte da palavra que é igual p/ todos)\n Resposta:")
-        match = [s for s in lista_path if radical in s]
-        print("\nOs arquivos encontrados foram:")
-        for arquivo in match:
-            print(arquivo)
-         
+        # radical = input("\nDigite o nome do radical comum aos arquivos que serão fundidos (parte da palavra que é igual p/ todos)\n Resposta:")
+        # match = [s for s in lista_path if radical in s]
+        # print("\nOs arquivos encontrados foram:")
+        # for arquivo in match:
+        #     print(arquivo)
+    while True:     
         print("Deseja proceder com a fusão dos arquivos acima?\n")
         ans_4 = input("Digite 'Y' para 'SIM' e 'N' para 'NÃO':")
         if (ans_4 == 'Y'):
-            lista_conv = match.copy()
+            lista_conv = lista_csv.copy()
             break
         elif(ans_2 == 'N'):
             continue
@@ -72,17 +77,6 @@ elif(int(ans_1) == 2):
 else:
     print("Comando não reconhecido, respostas possíveis: 1 ou 2. Execute novamente o programa.")
     sys.exit()
-
-while True:
-    end_file = input("\nEscolha o nome do arquivo de saída a ser gerado: ")
-    if not os.path.isdir("merge/"):
-        os.makedirs("merge/")
-    if os.path.isfile("merge/"+end_file):
-        print("Já existe um arquivo com o nome: "+end_file+"\n Digite outro nome e tente novamente.")
-        continue
-    else:
-        end_file = 'merge/'+end_file +'.csv'
-        break
 
 print('Como você deseja organizar o dataset?')
 lista_var = []
@@ -135,10 +129,23 @@ while True:
     if ans_7 == 'S':
         continue
     else:
-        frames = [ pd.read_csv(f, quotechar = '"') for f in lista_conv ]
-        result = pd.concat(frames, ignore_index=True)
-        result.sort_values(by=lista_var, inplace=True, ascending=(order))
-        result.to_csv(end_file,index = False)
+
+        if not os.path.isdir("merge/"):
+            os.makedirs("merge/")
+#FAZER FILTRAR OS DATASETS COM DELIMITADOR DIFERENTE OU COLUNAS EXTRAS            
+        for pacote_csv in lista_conv:
+            frames = [ pd.read_csv(path_csv, quotechar = '"') for path_csv in mapa_csv[pacote_csv] ]
+            result = pd.concat(frames, ignore_index=True)
+            result.sort_values(by=lista_var, inplace=True, ascending=(order))
+            result.drop_duplicates(subset='original_tweet_id')
+            end_file = pacote_csv
+            if os.path.isfile("merge/"+end_file):
+                print("ERRO: Já existe um arquivo com o nome: "+end_file+"\n Limpe a pasta e tente novamente.")
+                continue
+            else:
+                end_file = 'merge/'+end_file +'.csv'
+                break
+            result.to_csv(end_file,index = False)
         break
 
 print("Todas as conversões já foram concluídas. Finalizando o programa...")
