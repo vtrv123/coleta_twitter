@@ -132,20 +132,27 @@ while True:
 
         if not os.path.isdir("merge/"):
             os.makedirs("merge/")
-#FAZER FILTRAR OS DATASETS COM DELIMITADOR DIFERENTE OU COLUNAS EXTRAS            
         for pacote_csv in lista_conv:
-            frames = [ pd.read_csv(path_csv, quotechar = '"') for path_csv in mapa_csv[pacote_csv] ]
-            result = pd.concat(frames, ignore_index=True)
-            result.sort_values(by=lista_var, inplace=True, ascending=(order))
-            result.drop_duplicates(subset='original_tweet_id')
-            end_file = pacote_csv
-            if os.path.isfile("merge/"+end_file):
-                print("ERRO: Já existe um arquivo com o nome: "+end_file+"\n Limpe a pasta e tente novamente.")
-                continue
-            else:
-                end_file = 'merge/'+end_file +'.csv'
-                break
-            result.to_csv(end_file,index = False)
-        break
+            frames = []
+            for path_csv in mapa_csv[pacote_csv]:
+                try:
+                    frames.append(pd.read_csv(path_csv, quotechar = '"', dtype= str))
+                    result = pd.concat(frames, ignore_index=True)
+                    result.sort_values(by=lista_var, inplace=True, ascending=(order))
+                    result.drop_duplicates(subset='original_tweet_id')
+                    end_file = pacote_csv
+                    if end_file.endswith('.csv'):
+                        end_file = end_file[:-4]
+                    if os.path.isfile("merge/"+end_file):
+                        print("ERRO: Já existe um arquivo com o nome: "+end_file+"\n Limpe a pasta e tente novamente.")
+                        continue
+                    else:
+                        end_file = 'merge/'+end_file +'.csv'
+                except:
+                    print('Pulando o arquivo: '+ path_csv + '\n')
+                    continue
+                else:
+                    result.to_csv(end_file,index = False)
+    break
 
 print("Todas as conversões já foram concluídas. Finalizando o programa...")
